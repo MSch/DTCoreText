@@ -60,12 +60,15 @@
 		
 		return nil;
 	}
-	
+	CFAbsoluteTime start = CFAbsoluteTimeGetCurrent();
 	DTHTMLAttributedStringBuilder	*stringBuilder = [[DTHTMLAttributedStringBuilder alloc] initWithHTML:data options:options documentAttributes:dict];
 	
 	[stringBuilder buildString];
 	
-	return [stringBuilder generatedAttributedString];
+	id result = [stringBuilder generatedAttributedString];
+	CFAbsoluteTime finishLine = CFAbsoluteTimeGetCurrent();
+	NSLog(@"%f", finishLine - start);
+	return result;
 }
 
 #pragma mark Convenience Methods

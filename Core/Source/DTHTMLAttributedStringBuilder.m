@@ -53,9 +53,6 @@
 	BOOL needsNewLineBefore;
 	BOOL immediatelyClosed; 
 	
-	// GCD
-	dispatch_queue_t _stringAssemblyQueue;
-	dispatch_group_t _stringAssemblyGroup;
 
 	// lookup table for blocks that deal with begin and end tags
 	NSMutableDictionary *_tagStartHandlers;
@@ -75,19 +72,9 @@
 		// register default handlers
 		[self _registerTagStartHandlers];
 		[self _registerTagEndHandlers];
-		
-		//GCD setup
-		_stringAssemblyQueue = dispatch_queue_create("DTHTMLAttributedStringBuilder", 0);
-		_stringAssemblyGroup = dispatch_group_create();
-	}
+}
 	
 	return self;	
-}
-
-- (void)dealloc 
-{
-	dispatch_release(_stringAssemblyQueue);
-	dispatch_release(_stringAssemblyGroup);
 }
 
 - (BOOL)buildString
@@ -275,10 +262,7 @@
 	parser.delegate = (id)self;
 	
 	BOOL result = [parser parse]; 
-	
-	// wait until all string assembly is complete
-	dispatch_group_wait(_stringAssemblyGroup, DISPATCH_TIME_FOREVER);
-	
+		
 	return result;
 }
 
@@ -779,8 +763,6 @@
 
 - (void)_handleTagContent:(NSString *)string
 {
-	NSAssert(dispatch_get_current_queue() == _stringAssemblyQueue, @"method called from invalid queue");
-
 	// trim newlines
 	NSString *tagContents = [string stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]];
 	
@@ -940,7 +922,7 @@
 		}
 	};
 	
-	dispatch_group_async(_stringAssemblyGroup, _stringAssemblyQueue, tmpBlock);
+	tmpBlock();
 	
 }
 
@@ -983,14 +965,12 @@
 		}
 	};
 	
-	dispatch_group_async(_stringAssemblyGroup, _stringAssemblyQueue, tmpBlock);
+	tmpBlock();
 }
 
 - (void)parser:(DTHTMLParser *)parser foundCharacters:(NSString *)string
 {
-	dispatch_group_async(_stringAssemblyGroup, _stringAssemblyQueue,^{
-		[self _handleTagContent:string];	
-	});
+	[self _handleTagContent:string];
 }
 
 @end
